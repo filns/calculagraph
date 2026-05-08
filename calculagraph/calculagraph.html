@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倒数日</title>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f4e8d0"/><path d="M0 0 L100 0 L100 100 L0 100 Z" fill="none" stroke="%23e6d3b0" stroke-width="0.5"/></svg>');
+            background-size: 100px 100px;
+            background-color: #f4e8d0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-image 0.3s ease, background-color 0.3s ease;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .edit-btn {
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+        }
+
+        .countdown-card {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .countdown-card.no-glass {
+            background-color: white !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        .countdown-card.glass-enabled {
+            background-color: rgba(255, 255, 255, var(--card-opacity, 0.7)) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+        }
+
+        .event-title {
+            background-color: #3498db;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .days-count {
+            padding: 40px 20px;
+            text-align: center;
+            font-size: 80px;
+            font-weight: bold;
+            color: #333;
+            position: relative;
+            display: inline-block;
+            margin: 0 auto;
+        }
+
+        .days-container {
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        /* 数字和表情图标样式 */
+        .digit-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 0 5px;
+        }
+
+        .digit {
+            display: inline-block;
+            font-size: 80px;
+            font-weight: bold;
+        }
+
+        .digit-emoji {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(calc(-50% + 6px));
+            font-size: 20px;
+            z-index: 1;
+            -webkit-text-fill-color: initial;
+            color: #ff9a9e;
+        }
+
+        /* 自定义字体效果 - 与图片完全匹配 */
+        .days-count.font-bubble-blue {
+            background: linear-gradient(120deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            font-weight: bold;
+        }
+
+        .days-count.font-bubble-light {
+            color: #e6f3ff;
+            text-shadow: 
+                0 0 0 2px #b3d9ff,
+                0 2px 4px rgba(100, 150, 255, 0.3),
+                0 4px 8px rgba(100, 150, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.6);
+            font-weight: bold;
+            position: relative;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.9) 0%,
+                rgba(220, 240, 255, 0.8) 25%,
+                rgba(255, 255, 255, 0.9) 50%,
+                rgba(220, 240, 255, 0.8) 75%,
+                rgba(255, 255, 255, 0.9) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+        }
+
+        .days-count.font-bubble-light::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.9) 0%, transparent 50%),
+                radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.7) 0%, transparent 40%),
+                radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.8) 0%, transparent 45%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            z-index: 1;
+            opacity: 0.6;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+        }
+
+        .days-count.font-bubble-green {
+            background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(132, 250, 176, 0.3);
+            font-weight: bold;
+        }
+
+        .days-count.font-handwritten {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            color: #333333;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            transform: rotate(-3deg);
+            font-weight: bold;
+        }
+
+        .days-count.font-stripe {
+            background: linear-gradient(90deg, #ff6b6b 25%, #4ecdc4 50%, #45b7d1 75%, #96ceb4 100%);
+            background-size: 200% 200%;
+            animation: gradient 3s ease infinite;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
+            font-weight: bold;
+        }
+
+        .days-count.font-chinese {
+            font-family: 'SimSun', serif;
+            color: #333333;
+            text-shadow: none;
+            font-weight: normal;
+        }
+
+        .days-count.font-shadow {
+            color: #3498db;
+            text-shadow: 2px 2px 0px #2980b9, 4px 4px 8px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+        }
+
+        .days-count.font-celebration {
+            position: relative;
+            font-weight: bold;
+        }
+
+        .days-count.font-celebration .digit {
+            background: linear-gradient(120deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(255, 154, 158, 0.3);
+            font-size: 80px;
+            font-weight: bold;
+        }
+
+        .days-count.font-pink {
+            background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(240, 147, 251, 0.3);
+            font-weight: bold;
+        }
+
+        .days-count.font-cursive {
+            font-family: 'Lucida Handwriting', cursive;
+            color: #666666;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+            font-weight: normal;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .target-date {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .events-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 90%;
+            max-width: 1200px;
+            overflow-y: auto;
+            padding: 10px;
+            justify-content: center;
+        }
+
+        .event-card {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            flex: 0 0 calc(33.333% - 20px);
+            min-width: 280px;
+            max-width: 400px;
+        }
+
+        .event-card.no-glass {
+            background-color: white !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        .event-card.glass-enabled {
+            background-color: rgba(255, 255, 255, var(--card-opacity, 0.7)) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+        }
+
+        .event-card-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .event-card-btn {
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .event-card-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+        }
+
+        .event-card-btn.edit {
+            color: #3498db;
+        }
+
+        .event-card-btn.delete {
+            color: #e74c3c;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .footer-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .footer-btn i {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            background-color: #666;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+
+        .icon-share {
+            background-color: #e67e22;
+        }
+
+        .icon-save {
+            background-color: #27ae60;
+        }
+
+        .icon-bg {
+            background-color: #9b59b6;
+        }
+
+        .icon-setting {
+            background-color: #f39c12;
+        }
+
+        .icon-add {
+            background-color: #e74c3c;
+            border-radius: 50%;
+        }
+
+        .background-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .bg-option {
+            width: 100%;
+            height: 60px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .bg-option:hover {
+            transform: scale(1.05);
+            border-color: #3498db;
+        }
+
+        .bg-option.active {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+
+        .bg-wood {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f4e8d0"/><path d="M0 0 L100 0 L100 100 L0 100 Z" fill="none" stroke="%23e6d3b0" stroke-width="0.5"/></svg>');
+            background-size: 100px 100px;
+            background-color: #f4e8d0;
+        }
+
+        .bg-blue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .bg-green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .bg-pink {
+            background: linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%);
+        }
+
+        .bg-orange {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .bg-purple {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .custom-color-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .color-picker {
+            width: 60px;
+            height: 40px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .image-upload-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .upload-btn:hover {
+            background-color: #229954;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .about-content {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .about-logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .about-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .about-version {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .about-divider {
+            height: 1px;
+            background-color: #ddd;
+            margin: 20px 0;
+        }
+
+        .about-section {
+            margin-bottom: 20px;
+        }
+
+        .about-section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .about-info {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .about-info a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .about-info a:hover {
+            text-decoration: underline;
+        }
+
+        .settings-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .settings-item {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-item:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .settings-item-label {
+            font-size: 16px;
+            color: #333;
+        }
+
+        .settings-item-arrow {
+            color: #999;
+            font-size: 20px;
+        }
+
+        /* 开关样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: #3498db;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .slider.round {
+            border-radius: 24px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        /* 滑动条样式 */
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .range-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .range-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .range-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            border: none;
+        }
+
+        .range-value {
+            min-width: 50px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">倒数日</div>
+        <button class="edit-btn" onclick="openEditModal()">✏️</button>
+    </div>
+
+    <div class="content">
+        <div class="events-container" id="eventsContainer">
+        </div>
+    </div>
+
+    <div class="footer">
+        <button class="footer-btn" onclick="shareEvent()">
+            <div class="icon icon-share"></div>
+            <span>分享</span>
+        </button>
+        <button class="footer-btn" onclick="saveAsImage()">
+            <div class="icon icon-save"></div>
+            <span>存为图片</span>
+        </button>
+        <button class="footer-btn" onclick="changeBackground()">
+            <div class="icon icon-bg"></div>
+            <span>背景</span>
+        </button>
+        <button class="footer-btn" onclick="openSettings()">
+            <div class="icon icon-setting"></div>
+            <span>设置</span>
+        </button>
+        <button class="footer-btn" onclick="addEvent()">
+            <div class="icon icon-add"></div>
+            <span>添加</span>
+        </button>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>编辑事件</h2>
+            <div class="form-group">
+                <label for="eventName">事件名称</label>
+                <input type="text" id="eventName" placeholder="请输入事件名称">
+            </div>
+            <div class="form-group">
+                <label for="targetDateInput">目标日期</label>
+                <input type="date" id="targetDateInput">
+            </div>
+            <div class="form-group">
+                <label for="eventColor">标签颜色</label>
+                <input type="color" id="eventColor" value="#3498db">
+            </div>
+            <div class="form-group">
+                <label for="eventFont">天数字体</label>
+                <select id="eventFont">
+                    <option value="default">默认字体</option>
+                    <option value="font-bubble-blue">蓝色气泡</option>
+                    <option value="font-bubble-light">浅色气泡</option>
+                    <option value="font-bubble-green">绿色气泡</option>
+                    <option value="font-handwritten">手写风格</option>
+                    <option value="font-stripe">渐变条纹</option>
+                    <option value="font-chinese">中文风格</option>
+                    <option value="font-shadow">立体阴影</option>
+                    <option value="font-celebration">庆祝风格</option>
+                    <option value="font-pink">粉色渐变</option>
+                    <option value="font-cursive">花体风格</option>
+                </select>
+            </div>
+            <button class="btn" onclick="saveEvent()">保存</button>
+        </div>
+    </div>
+
+    <div id="backgroundModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeBackgroundModal()">&times;</span>
+            <h2>背景设置</h2>
+            
+            <div class="section-title">预设背景</div>
+            <div class="background-options">
+                <div class="bg-option bg-wood" onclick="selectBackground('wood')" data-bg="wood"></div>
+                <div class="bg-option bg-blue" onclick="selectBackground('blue')" data-bg="blue"></div>
+                <div class="bg-option bg-green" onclick="selectBackground('green')" data-bg="green"></div>
+                <div class="bg-option bg-pink" onclick="selectBackground('pink')" data-bg="pink"></div>
+                <div class="bg-option bg-orange" onclick="selectBackground('orange')" data-bg="orange"></div>
+                <div class="bg-option bg-purple" onclick="selectBackground('purple')" data-bg="purple"></div>
+            </div>
+
+            <div class="custom-color-section">
+                <div class="section-title">自定义颜色</div>
+                <div class="color-picker-container">
+                    <input type="color" id="customColor" class="color-picker" value="#f4e8d0">
+                    <span id="colorValue">#f4e8d0</span>
+                </div>
+                <button class="btn" onclick="applyCustomColor()">应用自定义颜色</button>
+            </div>
+
+            <div class="image-upload-section">
+                <div class="section-title">自定义图片</div>
+                <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                <button class="upload-btn" onclick="document.getElementById('imageUpload').click()">选择图片</button>
+                <img id="previewImage" class="preview-image" alt="预览">
+                <div class="btn-group">
+                    <button class="btn" onclick="applyCustomImage()">应用图片</button>
+                    <button class="btn btn-secondary" onclick="clearCustomImage()">清除图片</button>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="saveBackgroundSettings()">保存设置</button>
+                <button class="btn btn-secondary" onclick="closeBackgroundModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSettingsModal()">&times;</span>
+            <h2>设置</h2>
+            
+            <div class="settings-menu">
+                <div class="settings-item">
+                    <span class="settings-item-label">毛玻璃效果</span>
+                    <label class="switch">
+                        <input type="checkbox" id="glassEffectToggle" checked onchange="toggleGlassEffect()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">农历显示</span>
+                    <label class="switch">
+                        <input type="checkbox" id="lunarCalendarToggle" onchange="toggleLunarCalendar()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="settings-item" id="opacitySetting">
+                    <div style="width: 100%;">
+                        <div class="settings-item-label">背景透明度</div>
+                        <div class="range-container">
+                            <input type="range" id="opacitySlider" class="range-slider" min="0" max="100" value="70" oninput="updateOpacity(this.value)">
+                            <span class="range-value" id="opacityValue">70%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-item" onclick="openAbout()">
+                    <span class="settings-item-label">关于</span>
+                    <span class="settings-item-arrow">›</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAboutModal()">&times;</span>
+            
+            <div class="about-content">
+                <div class="about-logo">📅</div>
+                <div class="about-title">倒数日</div>
+                <div class="about-version">版本 v1.314</div>
+                
+                <div class="about-divider"></div>
+                
+                <div class="about-section">
+                    <div class="about-section-title">开发者信息</div>
+                    <div class="about-info">
+                        [1] <a href="https://github.com/trae" target="_blank">@trae</a><br>
+                        [2] <a href="mailto:hyposelenia2026@163.com">hyposelenia2026@163.com</a>
+                    </div>
+                </div>
+                
+                <div class="about-divider"></div>
+                
+                <div class="about-section">
+                    <div class="about-section-title">功能介绍</div>
+                    <div class="about-info">
+                        倒数日是一个简洁美观的倒数日应用，帮助您记录重要日期，提醒您珍惜时光。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let events = [];
+
+        let backgroundSettings = {
+            type: 'preset',
+            preset: 'wood',
+            customColor: '#f4e8d0',
+            customImage: null,
+            glassEffect: true,
+            cardOpacity: 0.7,
+            lunarCalendar: false
+        };
+
+        let currentCustomImage = null;
+
+        const lunarInfo = [
+            0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
+            0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0,
+            0x14977, 0x04970, 0x0a4b0, 0x0b4b5, 0x06a50, 0x06d40, 0x1ab54, 0x02b60, 0x09570,
+            0x052f2, 0x04970, 0x06566, 0x0d4a0, 0x0ea50, 0x06e95, 0x05ad0, 0x02b60,
+            0x186e3, 0x092e0, 0x1c8d7, 0x0c950, 0x0d4a0, 0x1d8a6, 0x0b550, 0x056a0,
+            0x1a5b4, 0x025d0, 0x092d0, 0x0d2b2, 0x0a950, 0x0b557, 0x06ca0, 0x0b550,
+            0x15355, 0x04da0, 0x0a5d0, 0x14573, 0x052d0, 0x0a9a8, 0x0e950, 0x06aa0,
+            0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950,
+            0x05b57, 0x056a0, 0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250,
+            0x0d558, 0x0b540, 0x0b5a0, 0x195a6, 0x095b0, 0x049b0, 0x0a974, 0x0a4b0,
+            0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570, 0x04af5, 0x04970,
+            0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x055c0, 0x0ab60, 0x096d5, 0x092e0,
+            0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0,
+            0x092d0, 0x0cab5, 0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0,
+            0x0a5b0, 0x15176, 0x052b0, 0x0a930, 0x07954, 0x06aa0, 0x0ad50, 0x05b52,
+            0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530, 0x05aa0, 0x076a3,
+            0x096d0, 0x04bd7, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45,
+            0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255,
+            0x06d20, 0x0ada0
+        ];
+
+        const lunarMonthName = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊'];
+        const lunarDayName = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十', 
+                            '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', 
+                            '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
+        const tianGan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+        const diZhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+
+        function getGanZhiYear(year) {
+            const baseYear = 1900;
+            const offset = (year - baseYear + 60) % 60;
+            const tianGanIndex = offset % 10;
+            const diZhiIndex = offset % 12;
+            return tianGan[tianGanIndex] + diZhi[diZhiIndex];
+        }
+
+        function getLunarDate(date) {
+            const baseDate = new Date(1900, 0, 31);
+            const objDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            let offset = (objDate - baseDate) / 86400000;
+            let i = 1900;
+            
+            while (i < 2101 && offset >= 0) {
+                let daysInLunarYear = getLunarYearDays(i);
+                if (offset < daysInLunarYear) {
+                    break;
+                }
+                offset -= daysInLunarYear;
+                i++;
+            }
+            
+            let lunarYear = i;
+            let leapMonth = getLeapMonth(i);
+            let leap = false;
+            let lunarMonth = 1;
+            let daysInLunarMonth;
+            let j = 1;
+            
+            while (j < 13 && offset >= 0) {
+                if (leapMonth > 0 && j === leapMonth && !leap) {
+                    leap = true;
+                    daysInLunarMonth = getLeapMonthDays(i);
+                } else {
+                    daysInLunarMonth = getLunarMonthDays(lunarYear, leap ? leapMonth : j);
+                    if (!leap) {
+                        lunarMonth = j;
+                    }
+                }
+                
+                if (offset < daysInLunarMonth) {
+                    break;
+                }
+                
+                offset -= daysInLunarMonth;
+                
+                if (leap) {
+                    leap = false;
+                } else {
+                    j++;
+                }
+            }
+            
+            let lunarDay = Math.round(offset) + 1;
+            
+            return {
+                year: lunarYear,
+                month: lunarMonth,
+                day: lunarDay,
+                leap: leap
+            };
+        }
+
+        function getLunarYearDays(year) {
+            let sum = 348;
+            for (let i = 0x8000; i > 0x8; i >>= 1) {
+                sum += (lunarInfo[year - 1900] & i) ? 1 : 0;
+            }
+            return sum + getLeapMonthDays(year);
+        }
+
+        function getLeapMonth(year) {
+            return lunarInfo[year - 1900] & 0xf;
+        }
+
+        function getLeapMonthDays(year) {
+            if (getLeapMonth(year)) {
+                return ((lunarInfo[year - 1900] & 0x10000) ? 30 : 29);
+            }
+            return 0;
+        }
+
+        function getLunarMonthDays(year, month) {
+            return ((lunarInfo[year - 1900] & (0x8000 >> (month - 1))) ? 30 : 29);
+        }
+
+        function formatLunarDate(lunar) {
+            if (!lunar || !lunar.month || !lunar.day) {
+                return '';
+            }
+            let monthStr = lunarMonthName[lunar.month - 1] || '';
+            if (lunar.leap) monthStr = '闰' + monthStr;
+            let dayStr = lunarDayName[lunar.day - 1] || '';
+            const ganZhiYear = getGanZhiYear(lunar.year);
+            return `${lunar.year}年(${ganZhiYear})${monthStr}月${dayStr}`;
+        }
+
+        async function init() {
+            await loadBackgroundSettings();
+            await loadEvents();
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+            setupColorPicker();
+            updateGlassEffectToggle();
+            updateOpacitySlider();
+            updateBackgroundModalUI();
+            updateLunarCalendarToggle();
+        }
+
+        function updateLunarCalendarToggle() {
+            const toggle = document.getElementById('lunarCalendarToggle');
+            if (toggle) {
+                toggle.checked = backgroundSettings.lunarCalendar;
+            }
+        }
+
+        function toggleGlassEffect() {
+            const toggle = document.getElementById('glassEffectToggle');
+            backgroundSettings.glassEffect = toggle.checked;
+            applyGlassEffect();
+            updateOpacityVisibility();
+            saveAllSettings();
+        }
+
+        function toggleLunarCalendar() {
+            const toggle = document.getElementById('lunarCalendarToggle');
+            backgroundSettings.lunarCalendar = toggle.checked;
+            updateCountdown();
+            saveAllSettings();
+        }
+
+        function updateOpacity(value) {
+            const opacity = value / 100;
+            backgroundSettings.cardOpacity = opacity;
+            document.getElementById('opacityValue').textContent = value + '%';
+            applyGlassEffect();
+            saveAllSettings();
+        }
+
+        function updateOpacitySlider() {
+            const slider = document.getElementById('opacitySlider');
+            if (slider) {
+                slider.value = Math.round(backgroundSettings.cardOpacity * 100);
+                document.getElementById('opacityValue').textContent = Math.round(backgroundSettings.cardOpacity * 100) + '%';
+            }
+            updateOpacityVisibility();
+        }
+
+        function updateOpacityVisibility() {
+            const opacitySetting = document.getElementById('opacitySetting');
+            if (opacitySetting) {
+                if (backgroundSettings.glassEffect) {
+                    opacitySetting.style.display = 'block';
+                } else {
+                    opacitySetting.style.display = 'none';
+                }
+            }
+        }
+
+        function applyGlassEffect() {
+            const cards = document.querySelectorAll('.event-card');
+            cards.forEach(card => {
+                if (backgroundSettings.glassEffect) {
+                    card.classList.remove('no-glass');
+                    card.classList.add('glass-enabled');
+                    card.style.setProperty('--card-opacity', backgroundSettings.cardOpacity);
+                } else {
+                    card.classList.remove('glass-enabled');
+                    card.classList.add('no-glass');
+                }
+            });
+        }
+
+        function updateGlassEffectToggle() {
+            const toggle = document.getElementById('glassEffectToggle');
+            if (toggle) {
+                toggle.checked = backgroundSettings.glassEffect;
+            }
+        }
+
+        function updateCountdown() {
+            const container = document.getElementById('eventsContainer');
+            container.innerHTML = '';
+            
+            const now = new Date();
+            
+            events.forEach(event => {
+                const target = event.targetDate;
+                const diffTime = target - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                if (backgroundSettings.glassEffect) {
+                    card.classList.add('glass-enabled');
+                } else {
+                    card.classList.add('no-glass');
+                }
+                
+                // 为庆祝风格添加表情图标
+                if (event.font === 'font-celebration') {
+                    const diffDaysStr = diffDays.toString();
+                    const daysHtml = diffDaysStr.split('').map(digit => `
+                        <span class="digit-wrapper">
+                            <span class="digit">${digit}</span>
+                            <span class="digit-emoji">🎉</span>
+                        </span>
+                    `).join('');
+                    
+                    card.innerHTML = `
+                        <div class="event-card-actions">
+                            <button class="event-card-btn edit" onclick="editEvent(${event.id})">✏️</button>
+                            <button class="event-card-btn delete" onclick="deleteEvent(${event.id})">🗑️</button>
+                        </div>
+                        <div class="event-title" style="background-color: ${event.color || '#3498db'}">${event.name}还有</div>
+                        <div class="days-container">
+                            <div class="days-count ${event.font || 'default'}" data-text="${diffDays}">${daysHtml}</div>
+                        </div>
+                        <div class="target-date">目标日: ${formatDate(target)}</div>
+                    `;
+                } else {
+                    card.innerHTML = `
+                        <div class="event-card-actions">
+                            <button class="event-card-btn edit" onclick="editEvent(${event.id})">✏️</button>
+                            <button class="event-card-btn delete" onclick="deleteEvent(${event.id})">🗑️</button>
+                        </div>
+                        <div class="event-title" style="background-color: ${event.color || '#3498db'}">${event.name}还有</div>
+                        <div class="days-container">
+                            <div class="days-count ${event.font || 'default'}" data-text="${diffDays}">${diffDays}</div>
+                        </div>
+                        <div class="target-date">目标日: ${formatDate(target)}</div>
+                    `;
+                }
+                
+                container.appendChild(card);
+            });
+            
+            applyGlassEffect();
+        }
+
+        function formatDate(date) {
+            if (backgroundSettings.lunarCalendar) {
+                const lunar = getLunarDate(date);
+                const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const weekday = weekdays[date.getDay()];
+                return `${formatLunarDate(lunar)} ${weekday}`;
+            } else {
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const weekday = weekdays[date.getDay()];
+                return `${year}-${month}-${day} ${weekday}`;
+            }
+        }
+
+        let currentEditingEventId = null;
+
+        function openEditModal(eventId = null) {
+            currentEditingEventId = eventId;
+            const modal = document.getElementById('editModal');
+            const title = modal.querySelector('h2');
+            
+            if (eventId) {
+                const event = events.find(e => e.id === eventId);
+                if (event) {
+                    title.textContent = '编辑事件';
+                    document.getElementById('eventName').value = event.name;
+                    const targetDateStr = event.targetDate.toISOString().split('T')[0];
+                    document.getElementById('targetDateInput').value = targetDateStr;
+                    document.getElementById('eventColor').value = event.color || '#3498db';
+                    document.getElementById('eventFont').value = event.font || 'default';
+                }
+            } else {
+                title.textContent = '添加事件';
+                document.getElementById('eventName').value = '';
+                document.getElementById('targetDateInput').value = '';
+                document.getElementById('eventColor').value = '#3498db';
+                document.getElementById('eventFont').value = 'default';
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditingEventId = null;
+        }
+
+        function saveEvent() {
+            const eventName = document.getElementById('eventName').value;
+            const targetDateStr = document.getElementById('targetDateInput').value;
+            const eventColor = document.getElementById('eventColor').value;
+            const eventFont = document.getElementById('eventFont').value;
+
+            if (eventName && targetDateStr) {
+                if (currentEditingEventId) {
+                    const event = events.find(e => e.id === currentEditingEventId);
+                    if (event) {
+                        event.name = eventName;
+                        event.targetDate = new Date(targetDateStr);
+                        event.color = eventColor;
+                        event.font = eventFont;
+                    }
+                } else {
+                    events.push({
+                        id: Date.now(),
+                        name: eventName,
+                        targetDate: new Date(targetDateStr),
+                        color: eventColor,
+                        font: eventFont
+                    });
+                }
+                updateCountdown();
+                closeEditModal();
+                saveEvents();
+            } else {
+                alert('请填写完整信息');
+            }
+        }
+
+        function editEvent(eventId) {
+            openEditModal(eventId);
+        }
+
+        function deleteEvent(eventId) {
+            if (confirm('确定要删除这个事件吗？')) {
+                events = events.filter(e => e.id !== eventId);
+                updateCountdown();
+                saveEvents();
+            }
+        }
+
+        function addEvent() {
+            openEditModal();
+        }
+
+        function shareEvent() {
+            if (events.length === 0) {
+                alert('没有可分享的事件');
+                return;
+            }
+            
+            const event = events[0];
+            const daysLeft = Math.ceil((event.targetDate - new Date()) / (1000 * 60 * 60 * 24));
+            const message = `${event.name}还有${daysLeft}天，使用Days Matter倒数日应用`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: '倒数日提醒',
+                    text: message
+                });
+            } else {
+                alert('分享功能暂不可用');
+            }
+        }
+
+        function saveAsImage() {
+            const cards = document.querySelectorAll('.event-card');
+            const body = document.body;
+            
+            if (cards.length === 0 || !body) {
+                alert('没有可保存的事件');
+                return;
+            }
+
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'fixed';
+            tempContainer.style.top = '0';
+            tempContainer.style.left = '0';
+            tempContainer.style.width = '100%';
+            tempContainer.style.height = '100%';
+            tempContainer.style.zIndex = '-9999';
+            tempContainer.style.display = 'flex';
+            tempContainer.style.alignItems = 'center';
+            tempContainer.style.justifyContent = 'center';
+            tempContainer.style.flexDirection = 'column';
+            tempContainer.style.gap = '20px';
+            tempContainer.style.padding = '40px 20px';
+            tempContainer.style.overflow = 'auto';
+            
+            const computedStyle = window.getComputedStyle(body);
+            tempContainer.style.backgroundImage = computedStyle.backgroundImage;
+            tempContainer.style.backgroundColor = computedStyle.backgroundColor;
+            tempContainer.style.backgroundSize = computedStyle.backgroundSize;
+            tempContainer.style.backgroundPosition = computedStyle.backgroundPosition;
+            tempContainer.style.backgroundRepeat = computedStyle.backgroundRepeat;
+
+            const header = document.createElement('div');
+            header.style.textAlign = 'center';
+            header.style.marginBottom = '30px';
+            header.innerHTML = '<h1 style="font-size: 48px; font-weight: bold; color: #333; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">倒数日</h1>';
+            tempContainer.appendChild(header);
+
+            const cardsWrapper = document.createElement('div');
+            cardsWrapper.style.display = 'flex';
+            cardsWrapper.style.flexDirection = 'row';
+            cardsWrapper.style.flexWrap = 'wrap';
+            cardsWrapper.style.gap = '20px';
+            cardsWrapper.style.justifyContent = 'center';
+            cardsWrapper.style.width = '100%';
+            cardsWrapper.style.maxWidth = '1400px';
+            
+            cards.forEach(card => {
+                const cardClone = card.cloneNode(true);
+                cardClone.style.transform = 'none';
+                cardClone.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.15)';
+                cardClone.style.position = 'relative';
+                cardClone.style.flex = '0 0 calc(33.333% - 20px)';
+                cardClone.style.minWidth = '280px';
+                cardClone.style.maxWidth = '400px';
+                
+                const computedCardStyle = window.getComputedStyle(card);
+                cardClone.style.backdropFilter = computedCardStyle.backdropFilter;
+                cardClone.style.webkitBackdropFilter = computedCardStyle.webkitBackdropFilter;
+                cardClone.style.backgroundColor = computedCardStyle.backgroundColor;
+                
+                if (backgroundSettings.glassEffect) {
+                    cardClone.style.backgroundColor = `rgba(255, 255, 255, ${backgroundSettings.cardOpacity})`;
+                }
+                
+                const actions = cardClone.querySelector('.event-card-actions');
+                if (actions) {
+                    actions.remove();
+                }
+                
+                cardsWrapper.appendChild(cardClone);
+            });
+            
+            tempContainer.appendChild(cardsWrapper);
+            document.body.appendChild(tempContainer);
+
+            html2canvas(tempContainer, {
+                backgroundColor: null,
+                scale: 3,
+                useCORS: true,
+                logging: false,
+                allowTaint: true,
+                foreignObjectRendering: true,
+                removeContainer: true,
+                imageTimeout: 5000,
+                letterRendering: true,
+                onclone: (clonedDoc) => {
+                    const clonedCards = clonedDoc.querySelectorAll('.event-card');
+                    clonedCards.forEach(card => {
+                        card.style.transform = 'none';
+                        const originalCard = document.querySelector('.event-card');
+                        if (originalCard) {
+                            const computedStyle = window.getComputedStyle(originalCard);
+                            card.style.backdropFilter = computedStyle.backdropFilter;
+                            card.style.webkitBackdropFilter = computedStyle.webkitBackdropFilter;
+                            card.style.backgroundColor = computedStyle.backgroundColor;
+                            if (backgroundSettings.glassEffect) {
+                                card.style.backgroundColor = `rgba(255, 255, 255, ${backgroundSettings.cardOpacity})`;
+                            }
+                        }
+                    });
+                }
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `倒数日_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+                
+                document.body.removeChild(tempContainer);
+            }).catch(error => {
+                console.error('保存图片失败:', error);
+                document.body.removeChild(tempContainer);
+                alert('保存图片失败，请重试');
+            });
+        }
+
+        function changeBackground() {
+            document.getElementById('backgroundModal').style.display = 'block';
+            updateBackgroundUI();
+            updateBackgroundModalUI();
+        }
+
+        function closeBackgroundModal() {
+            document.getElementById('backgroundModal').style.display = 'none';
+        }
+
+        function updateBackgroundModalUI() {
+            const colorPicker = document.getElementById('customColor');
+            if (colorPicker && backgroundSettings.type === 'color') {
+                colorPicker.value = backgroundSettings.customColor;
+                document.getElementById('colorValue').textContent = backgroundSettings.customColor;
+            }
+        }
+
+        function selectBackground(type) {
+            backgroundSettings.type = 'preset';
+            backgroundSettings.preset = type;
+            applyBackground();
+            updateBackgroundUI();
+            saveAllSettings();
+        }
+
+        function setupColorPicker() {
+            const colorPicker = document.getElementById('customColor');
+            colorPicker.addEventListener('input', function(e) {
+                document.getElementById('colorValue').textContent = e.target.value;
+            });
+        }
+
+        function applyCustomColor() {
+            const color = document.getElementById('customColor').value;
+            backgroundSettings.type = 'color';
+            backgroundSettings.customColor = color;
+            applyBackground();
+            saveAllSettings();
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    // 显示加载状态
+                    const previewImage = document.getElementById('previewImage');
+                    previewImage.style.display = 'block';
+                    previewImage.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><text x="50%" y="50%" font-size="14" text-anchor="middle" dy=".3em">正在处理图片...</text></svg>';
+                    
+                    // 压缩图片为WebP格式
+                    console.log('开始压缩图片...');
+                    const compressedImage = await compressImageToWebP(file);
+                    console.log('图片压缩成功');
+                    
+                    currentCustomImage = compressedImage;
+                    previewImage.src = currentCustomImage;
+                    
+                    // 显示成功提示
+                    alert('图片处理成功');
+                } catch (error) {
+                    console.error('图片处理失败:', error);
+                    const previewImage = document.getElementById('previewImage');
+                    previewImage.style.display = 'none';
+                    alert('图片处理失败，请重试: ' + error.message);
+                }
+            }
+        }
+
+        function applyCustomImage() {
+            console.log('应用自定义图片, currentCustomImage:', currentCustomImage);
+            if (currentCustomImage) {
+                backgroundSettings.type = 'image';
+                backgroundSettings.customImage = currentCustomImage;
+                console.log('更新后的backgroundSettings:', backgroundSettings);
+                applyBackground();
+                saveAllSettings();
+            } else {
+                alert('请先选择图片');
+            }
+        }
+
+        function clearCustomImage() {
+            currentCustomImage = null;
+            document.getElementById('previewImage').style.display = 'none';
+            document.getElementById('imageUpload').value = '';
+        }
+
+        function applyBackground() {
+            const body = document.body;
+            
+            switch(backgroundSettings.type) {
+                case 'preset':
+                    applyPresetBackground(backgroundSettings.preset);
+                    break;
+                case 'color':
+                    body.style.backgroundImage = 'none';
+                    body.style.backgroundColor = backgroundSettings.customColor;
+                    break;
+                case 'image':
+                    body.style.backgroundImage = `url(${backgroundSettings.customImage})`;
+                    body.style.backgroundSize = 'cover';
+                    body.style.backgroundPosition = 'center';
+                    body.style.backgroundRepeat = 'no-repeat';
+                    break;
+            }
+        }
+
+        function applyPresetBackground(type) {
+            const body = document.body;
+            const backgrounds = {
+                wood: {
+                    image: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f4e8d0\"/><path d=\"M0 0 L100 0 L100 100 L0 100 Z\" fill=\"none\" stroke=\"%23e6d3b0\" stroke-width=\"0.5\"/></svg>')",
+                    size: '100px 100px',
+                    color: '#f4e8d0'
+                },
+                blue: {
+                    image: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    size: 'cover',
+                    color: 'transparent'
+                },
+                green: {
+                    image: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                    size: 'cover',
+                    color: 'transparent'
+                },
+                pink: {
+                    image: 'linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%)',
+                    size: 'cover',
+                    color: 'transparent'
+                },
+                orange: {
+                    image: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    size: 'cover',
+                    color: 'transparent'
+                },
+                purple: {
+                    image: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    size: 'cover',
+                    color: 'transparent'
+                }
+            };
+
+            const bg = backgrounds[type];
+            body.style.backgroundImage = bg.image;
+            body.style.backgroundSize = bg.size;
+            body.style.backgroundColor = bg.color;
+        }
+
+        function updateBackgroundUI() {
+            const options = document.querySelectorAll('.bg-option');
+            options.forEach(option => {
+                option.classList.remove('active');
+                if (option.dataset.bg === backgroundSettings.preset && backgroundSettings.type === 'preset') {
+                    option.classList.add('active');
+                }
+            });
+        }
+
+        async function saveBackgroundSettings() {
+            try {
+                if (backgroundSettings.type === 'image' && currentCustomImage) {
+                    backgroundSettings.customImage = currentCustomImage;
+                }
+                
+                // 保存设置到IndexedDB
+                const success1 = await saveToIndexedDB('backgroundSettings', JSON.stringify(backgroundSettings));
+                
+                // 如果有自定义图片，单独保存
+                if (backgroundSettings.customImage) {
+                    const success2 = await saveToIndexedDB('customImage', backgroundSettings.customImage);
+                }
+                
+                console.log('背景设置保存成功');
+                applyGlassEffect();
+                closeBackgroundModal();
+                alert('背景设置已保存');
+            } catch (error) {
+                console.error('保存背景设置失败:', error);
+                alert('保存背景设置失败: ' + error.message);
+            }
+        }
+
+        async function loadBackgroundSettings() {
+            try {
+                // 尝试从IndexedDB加载设置
+                let savedSettings = await loadFromIndexedDB('backgroundSettings');
+                if (savedSettings) {
+                    backgroundSettings = JSON.parse(savedSettings);
+                    console.log('从IndexedDB加载设置成功:', backgroundSettings);
+                } else {
+                    // 如果IndexedDB没有数据，尝试从localStorage恢复
+                    console.log('IndexedDB中没有保存的设置，尝试从localStorage恢复');
+                    const localStorageSettings = localStorage.getItem('daymatterBackground');
+                    if (localStorageSettings) {
+                        backgroundSettings = JSON.parse(localStorageSettings);
+                        console.log('从localStorage恢复设置成功:', backgroundSettings);
+                    }
+                }
+                
+                // 尝试从IndexedDB加载自定义图片
+                const savedCustomImage = await loadFromIndexedDB('customImage');
+                if (savedCustomImage) {
+                    currentCustomImage = savedCustomImage;
+                    backgroundSettings.customImage = savedCustomImage;
+                    console.log('从IndexedDB加载自定义图片成功');
+                }
+                
+                applyBackground();
+                applyGlassEffect();
+                console.log('背景设置加载成功');
+            } catch (error) {
+                console.error('加载背景设置失败:', error);
+                // 加载失败时使用默认设置
+                applyBackground();
+                applyGlassEffect();
+            }
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').style.display = 'block';
+            updateOpacitySlider();
+        }
+
+        async function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+            await saveAllSettings();
+        }
+
+        async function saveAllSettings() {
+            try {
+                // 创建不包含大图片的设置副本用于 localStorage
+                const settingsForStorage = {
+                    type: backgroundSettings.type,
+                    preset: backgroundSettings.preset,
+                    customColor: backgroundSettings.customColor,
+                    customImage: null, // 不在 localStorage 中存储大图片
+                    glassEffect: backgroundSettings.glassEffect,
+                    cardOpacity: backgroundSettings.cardOpacity,
+                    lunarCalendar: backgroundSettings.lunarCalendar
+                };
+                
+                // 保存到 IndexedDB
+                const success1 = await saveToIndexedDB('backgroundSettings', JSON.stringify(backgroundSettings));
+                
+                // 如果有自定义图片，单独保存到 IndexedDB（图片太大，不适合 localStorage）
+                if (backgroundSettings.customImage) {
+                    const success2 = await saveToIndexedDB('customImage', backgroundSettings.customImage);
+                }
+                
+                // 同时保存基础设置到 localStorage（不包含大图片）
+                localStorage.setItem('daymatterBackground', JSON.stringify(settingsForStorage));
+                
+                console.log('所有设置保存成功');
+                return true;
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                alert('保存设置失败: ' + error.message);
+                return false;
+            }
+        }
+
+        function saveSettingsToLocalStorage() {
+            try {
+                const settingsString = JSON.stringify(backgroundSettings);
+                console.log('保存背景设置大小:', settingsString.length, 'bytes');
+                
+                localStorage.setItem('daymatterBackground', settingsString);
+                console.log('背景设置已保存');
+            } catch (error) {
+                console.error('保存到localStorage失败:', error);
+                alert('保存设置失败: 存储空间不足');
+            }
+        }
+
+        function openAbout() {
+            document.getElementById('settingsModal').style.display = 'none';
+            document.getElementById('aboutModal').style.display = 'block';
+        }
+
+        function closeAboutModal() {
+            document.getElementById('aboutModal').style.display = 'none';
+        }
+
+        function addEvent() {
+            openEditModal();
+        }
+
+        // IndexedDB 相关函数
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                console.log('开始初始化IndexedDB');
+                const request = indexedDB.open('DayMatterDB', 2);
+                
+                request.onupgradeneeded = (event) => {
+                    console.log('IndexedDB升级事件触发，旧版本:', event.oldVersion, '新版本:', event.newVersion);
+                    const db = event.target.result;
+                    console.log('当前对象存储:', Array.from(db.objectStoreNames));
+                    if (!db.objectStoreNames.contains('backgrounds')) {
+                        db.createObjectStore('backgrounds', { keyPath: 'id' });
+                        console.log('创建backgrounds存储');
+                    }
+                    if (!db.objectStoreNames.contains('events')) {
+                        db.createObjectStore('events', { keyPath: 'id' });
+                        console.log('创建events存储');
+                    }
+                };
+                
+                request.onsuccess = (event) => {
+                    console.log('IndexedDB初始化成功');
+                    const db = event.target.result;
+                    console.log('当前对象存储:', Array.from(db.objectStoreNames));
+                    resolve(db);
+                };
+                
+                request.onerror = (event) => {
+                    console.error('IndexedDB初始化失败:', event.target.error);
+                    reject('IndexedDB初始化失败');
+                };
+            });
+        }
+
+        async function saveToIndexedDB(key, value) {
+            try {
+                console.log('保存到IndexedDB - key:', key, 'value length:', value ? value.length : 0);
+                const db = await initIndexedDB();
+                const storeName = key === 'events' ? 'events' : 'backgrounds';
+                console.log('使用存储:', storeName);
+                const transaction = db.transaction([storeName], 'readwrite');
+                const store = transaction.objectStore(storeName);
+                
+                store.put({
+                    id: key,
+                    value: value,
+                    timestamp: Date.now()
+                });
+                
+                return new Promise((resolve, reject) => {
+                    transaction.oncomplete = () => {
+                        console.log('保存成功 - key:', key);
+                        resolve(true);
+                    };
+                    transaction.onerror = () => {
+                        console.error('保存失败 - key:', key, 'error:', transaction.error);
+                        reject('保存失败');
+                    };
+                });
+            } catch (error) {
+                console.error('保存到IndexedDB失败:', error);
+                return false;
+            }
+        }
+
+        async function loadFromIndexedDB(key) {
+            try {
+                console.log('从IndexedDB加载 - key:', key);
+                const db = await initIndexedDB();
+                const storeName = key === 'events' ? 'events' : 'backgrounds';
+                console.log('使用存储:', storeName);
+                const transaction = db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.get(key);
+                
+                return new Promise((resolve) => {
+                    request.onsuccess = () => {
+                        console.log('加载成功 - key:', key, 'found:', !!request.result);
+                        resolve(request.result ? request.result.value : null);
+                    };
+                    request.onerror = () => {
+                        console.error('加载失败 - key:', key, 'error:', request.error);
+                        resolve(null);
+                    };
+                });
+            } catch (error) {
+                console.error('从IndexedDB加载失败:', error);
+                return null;
+            }
+        }
+
+        async function saveEvents() {
+            try {
+                console.log('开始保存事件，当前事件数量:', events.length);
+                const eventsData = events.map(event => ({
+                    id: event.id,
+                    name: event.name,
+                    targetDate: event.targetDate.toISOString(),
+                    color: event.color,
+                    font: event.font
+                }));
+                console.log('准备保存的事件数据:', eventsData);
+                
+                // 同时保存到 IndexedDB 和 localStorage
+                await saveToIndexedDB('events', JSON.stringify(eventsData));
+                localStorage.setItem('daymatterEvents', JSON.stringify(eventsData));
+                
+                console.log('事件保存成功');
+            } catch (error) {
+                console.error('保存事件失败:', error);
+            }
+        }
+
+        async function loadEvents() {
+            try {
+                console.log('开始加载事件');
+                
+                // 优先从 IndexedDB 加载
+                let savedEvents = await loadFromIndexedDB('events');
+                console.log('从IndexedDB加载到的事件数据:', savedEvents);
+                
+                // 如果 IndexedDB 没有数据，尝试从 localStorage 恢复
+                if (!savedEvents) {
+                    console.log('IndexedDB中没有保存的事件，尝试从localStorage恢复');
+                    const localStorageEvents = localStorage.getItem('daymatterEvents');
+                    if (localStorageEvents) {
+                        savedEvents = localStorageEvents;
+                        console.log('从localStorage恢复事件成功');
+                    }
+                }
+                
+                if (savedEvents) {
+                    const eventsData = JSON.parse(savedEvents);
+                    events = eventsData.map(event => ({
+                        id: event.id,
+                        name: event.name,
+                        targetDate: new Date(event.targetDate),
+                        color: event.color,
+                        font: event.font
+                    }));
+                    console.log('加载事件成功，包含颜色和字体:', events);
+                } else {
+                    console.log('没有保存的事件，使用默认事件');
+                    events = [
+                        {
+                            id: Date.now(),
+                            name: "生日",
+                            targetDate: new Date(2027, 1, 1),
+                            color: "#3498db",
+                            font: "default"
+                        }
+                    ];
+                }
+            } catch (error) {
+                console.error('加载事件失败:', error);
+            }
+        }
+
+        // WebP 压缩功能
+        function compressImageToWebP(file, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    // 计算压缩后的尺寸（保持宽高比）
+                    const maxWidth = 1920;
+                    const maxHeight = 1080;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                resolve(reader.result);
+                            };
+                            reader.onerror = () => {
+                                reject('读取压缩文件失败');
+                            };
+                            reader.readAsDataURL(blob);
+                        } else {
+                            reject('压缩失败');
+                        }
+                    }, 'image/webp', quality);
+                };
+                
+                img.onerror = () => {
+                    reject('图片加载失败');
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        window.onclick = function(event) {
+            const editModal = document.getElementById('editModal');
+            const bgModal = document.getElementById('backgroundModal');
+            const settingsModal = document.getElementById('settingsModal');
+            const aboutModal = document.getElementById('aboutModal');
+            
+            if (event.target == editModal) {
+                editModal.style.display = 'none';
+            }
+            if (event.target == bgModal) {
+                bgModal.style.display = 'none';
+            }
+            if (event.target == settingsModal) {
+                settingsModal.style.display = 'none';
+            }
+            if (event.target == aboutModal) {
+                aboutModal.style.display = 'none';
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
